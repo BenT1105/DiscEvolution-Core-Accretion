@@ -218,8 +218,9 @@ class SimpleDiscEOS(EOS_Table):
     def _f_Pr(self):
         kappa = self._K0 * self._T
         tau = 0.5 * self._Sigma * kappa
-        f_esc = 1 + 2/(3*tau*tau)
-        Pr_1 =  2.25 * self._gamma * (self._gamma - 1) * f_esc
+        f_esc = 1 + 2/(3*tau*tau)        
+        # Paardekooper et al. (2011) are missing a factor 4 (Bitsch & Kley 2011).  Corrected here.
+        Pr_1 =  4. * 2.25 * self._gamma * (self._gamma - 1) * f_esc
         return 1. / Pr_1
 
     @property
@@ -459,8 +460,10 @@ class IrradiatedEOS(EOS_Table):
     def _f_Pr(self):
         kappa = self._kappa_arr
         tau = 0.5 * self._Sigma * kappa
-        f_esc = 1 + 2/(3*tau*tau)
-        Pr_1 =  2.25 * self._gamma * (self._gamma - 1) * f_esc
+        # Added intermediate optical depth term.
+        f_esc = 1 + 2.*np.sqrt(3.)/(3.*tau)+2/(3*tau*tau)
+        # Paardekooper et al. (2011) are missing a factor 4 (Bitsch & Kley 2011).  Corrected here.
+        Pr_1 =  4. * 2.25 * self._gamma * (self._gamma - 1) * f_esc
         return 1. / Pr_1
 
     @property

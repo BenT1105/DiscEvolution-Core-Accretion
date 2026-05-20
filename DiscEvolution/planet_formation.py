@@ -825,10 +825,12 @@ class PlanetesimalAccretion(object):
         Mdot = 0
         if dRdt is None:
             dRdt = np.zeros_like(Rp)
-        if any(dRdt != 0):
-            Mdot = self.computeMdotMigration(Rp, Mp, dRdt)
-        else:
-            Mdot = self.computeMdotTwoPhase(Rp, Mp)
+        # To avoid any ambiguity, only use Migration model
+        # if any(dRdt != 0):
+        #     Mdot = self.computeMdotMigration(Rp, Mp, dRdt)
+        # else:
+        #     Mdot = self.computeMdotTwoPhase(Rp, Mp)
+        Mdot = self.computeMdotMigration(Rp, Mp, dRdt)
 
         return Mdot 
     
@@ -959,12 +961,13 @@ class TypeIMigration(object):
 
         h     = disc.interp(Rp, disc.H) / Rp
         Sigma = disc.interp(Rp, disc.Sigma)
-        nu    = disc.interp(Rp, disc.nu) * (1 + disc._gas._psi)
+        nu_SS = disc.interp(Rp, disc.nu)
+        nu    = disc.interp(Rp, disc.nu) 
         Pr    = disc.interp(Rp, disc.Pr)
 
         Om_k = star.Omega_k(Rp)
-        
-        Xi = nu/Pr
+        # Include disk wind contribution to temperature
+        Xi = nu_SS/Pr* (1 + disc._gas._psi/3.)
         Q = 2*Xi/(3*h*h*h*Rp*Rp*Om_k)
         g_eff = self.gamma_eff_tab(Q)
         
@@ -978,11 +981,13 @@ class TypeIMigration(object):
         norm *= AU**2/Mearth
         
         # Compute the scaling factors
-        k = jp / (2*np.pi * nu)
+        k = jp / (2*np.pi * nu_SS)
+        kXi  = jp / (2*np.pi * Xi)
         x = (1.1 / g_eff**0.25) * np.sqrt(q_h)
 
         pnu = 2*np.sqrt(k*x*x*x)/3
-        pXi = 3*pnu*np.sqrt(Pr)/2
+        #pXi = 3*pnu*np.sqrt(Pr)/2
+        pXi  = 2*np.sqrt(kXi * x*x*x) / 3
 
         Fnu, Gnu, Knu = _F(pnu), _G(pnu), _K(pnu)
         FXi, GXi, KXi = _F(pXi), _G(pXi), _K(pXi)
@@ -1107,9 +1112,8 @@ class PlanetMigration(object):
         Me = Mp*Mearth/Msun
         q = Me / star.M
         rH = star.r_Hill(Rp, Mp)
-        nu = disc.interp(Rp, disc.nu) * (1 + disc._gas._psi)
-    # For testing
-        #nu = disc.interp(Rp, disc.nu)
+        #nu = disc.interp(Rp, disc.nu) * (1 + disc._gas._psi)
+        nu = disc.interp(Rp, disc.nu)
 
         H  = disc.interp(Rp, disc.H)
 
@@ -1321,13 +1325,17 @@ class Bitsch2015Model(object):
             if self._pl_acc:
                 Mdot_pla = self._pl_acc.computeMdot(R_p, M_core, Rdot)
 
+            # Compute planetesimal partitioning fraction based on envelope mass
+            # All planetesimals go to core if M_env < 1 M_earth, to envelope if M_env >= 1 M_earth
+            f_pla = np.where(M_env >= 1.0, 1.0, 0.0)
+
             accreted = R_p <= Rmin
             Rdot[accreted] = Mcdot[accreted] = Medot[accreted] = 0
             
             dydt = np.empty_like(y)
             dydt[:N]    = Rdot
-            dydt[N:2*N]  = Mcdot + Mdot_pla*(1-f)
-            dydt[2*N:3*N] = Medot + Mdot_pla*f
+            dydt[N:2*N]  = Mcdot + Mdot_pla*(1-f_pla)
+            dydt[2*N:3*N] = Medot + Mdot_pla*f_pla
 
             if chem:
                 Xs, Xg, Xs_pla =  self._compute_chem(R_p)
@@ -1336,8 +1344,8 @@ class Bitsch2015Model(object):
                 Mg = np.maximum(Medot - Ms, 0)
                 Nspec = Xs.shape[0]
 
-                dydt[ 3       *N:(3+  Nspec)*N] = (Mcdot*Xs + Mdot_pla*(1-f)*Xs_pla).ravel()
-                dydt[(3+Nspec)*N:(3+2*Nspec)*N] = (Ms*Xs + Mg*Xg + Mdot_pla*f*Xs_pla).ravel()
+                dydt[ 3       *N:(3+  Nspec)*N] = (Mcdot*Xs + Mdot_pla*(1-f_pla)*Xs_pla).ravel()
+                dydt[(3+Nspec)*N:(3+2*Nspec)*N] = (Ms*Xs + Mg*Xg + Mdot_pla*f_pla*Xs_pla).ravel()
             
             return dydt
             

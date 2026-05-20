@@ -382,6 +382,7 @@ class DustGrowthTwoPop(DustyDisc):
 
         # MLB Oct 30, 2025:  Corrected to self._eos._alpha_t from self.alpha
         # alpha = self.alpha/self.Sc
+        #alpha = self.alpha/self.Sc
         alpha=self._eos._alpha_t/self.Sc
 
         a0  = 8 * self.Sigma / (np.pi * self._rho_s) * self.Re**-0.25
@@ -432,7 +433,6 @@ class DustGrowthTwoPop(DustyDisc):
         # MLB Oct 31, 2025: correction to be consistent with Drazkowska growth rate.
         # Bugfix Jan 9 as I'd forgotten the factor 1e-4 in the growth time-scale.
         ad = ad * ((self._eos._alpha_t/1.e-4)/self.R)**(1./3.)
-
         # Radial drift-driven fragmentation:
         cs = self.cs
         St_d = 2 * (self._uf/cs) / (gamma*h + 1e-300)
@@ -993,7 +993,9 @@ class SingleFluidDrift(object):
         sink_term_1 = (pla_eff / d) * M_peb[1] / (2 * np.pi * disc.R) * disc.is_critical[1]
 
         # Convert to dust fraction when returning
-        return sink_term_0 / Sigma, sink_term_1 / Sigma
+        tiny = np.finfo(Sigma.dtype).tiny
+        Sigma_safe = np.maximum(Sigma, tiny)
+        return sink_term_0 / Sigma_safe, sink_term_1 / Sigma_safe
     
     def __call__(self, dt, disc, gas_tracers=None, dust_tracers=None, v_visc=None):
         """Apply the update for radial drift over time-step dt"""
@@ -1040,7 +1042,10 @@ class SingleFluidDrift(object):
             if disc._planetesimal.ice_abund and (dust_tracers is not None):
                 # Find fraction of each dust species
                 tracer_total = dust_tracers.sum(axis=0)
-                species_frac = dust_tracers/tracer_total
+                tiny = np.finfo(dust_tracers.dtype).tiny
+                tracer_total_safe = np.maximum(tracer_total, tiny)
+                species_frac = dust_tracers / tracer_total_safe
+                species_frac[:, tracer_total <= tiny] = 0.0
 
                 # Apply change in species dust fraction to dust tracers
                 dust_tracers[:] -= species_frac * (L0*dt + L1*dt)
