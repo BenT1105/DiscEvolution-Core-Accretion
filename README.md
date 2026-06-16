@@ -1,7 +1,8 @@
 # DiscEvolution
 A python code to model the evolution of dust and gas in protoplanetary discs.
 
-Author: Richard Booth
+Original Author: Richard Booth
+This version modified by: Michael Balogh
 
 This code contains a set of modules to simulate the viscous evolution of protoplanetary discs over Myr
 time scales. This includes modules to compute the viscous evolution, grain growth, radial drift,
@@ -9,7 +10,10 @@ thermal structure, transport of volatiles and planet formation.
 
 An example of how to run the code can be found in the example directory.
 
-The code was originally described in [Booth et al. (2017)](https://arxiv.org/abs/1705.03305). If you
+This version of the code was used for [Balogh et al. (2026)]
+The script used to run models is provided in scripts/ and a notebook used to generate figures for the paper is in notebooks/.  The data generated from the simulations are not available in this repository; they will be provided separately (method TBD).
+
+The original code was originally described in [Booth et al. (2017)](https://arxiv.org/abs/1705.03305). If you
 use this code in your research, please cite this paper along with any supporting papers describing
 additional modules that you use. 
 
